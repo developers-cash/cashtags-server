@@ -21,12 +21,12 @@ class KioskRoute {
   // TODO Add Webhook Signature Verification
   async postWebhook (req, res, next) {
     try {
-      /*await CashPay.Signatures.verifyWebhook(req.rawBody, {
+      await CashPay.Signatures.verifyWebhook(JSON.stringify(req.body), {
         digest: req.headers['digest'],
         identity: req.headers['x-identity'],
         signature: req.headers['x-signature'],
         signatureType: req.headers['x-signature-type']
-      })*/
+      })
 
       webSocket.notify(req.params.channel, req.body.event, {
         memo: req.body.invoice.memo,

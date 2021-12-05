@@ -10,6 +10,10 @@ const CashPay = require('@developers.cash/cash-pay-server-js')
 
 class RootRoute {
   constructor () {
+    // Setup CashPayServer
+    CashPay.config.options.endpoint = config.cashPayServer
+    CashPay.config.invoice.apiKey = config.cashPayAPIKey
+
     // Public
     router.get('/', async (req, res, next) => this.root(req, res, next))
 
@@ -23,22 +27,40 @@ class RootRoute {
         throw new Error('Invalid "accept" header. Did you remember to add the bitcoincash:?r= prefix to the URL and URI encode the query parameters?')
       }
 
-      console.log(req.headers['x-forwarded-for'])
-
-      // Add 'bitcoincash:' prefix if not present
-      if (!req.query.to.startsWith('bitcoincash:')) {
-        req.query.to = `bitcoincash:${req.query.to}`
-      }
-
       // Create invoice
       const invoice = new CashPay.Invoice()
-        .setAPIKey(config.cashPayAPIKey)
         .setExpires(60*5)
-        .addAddress(req.query.to, req.query.a)
+
+      // Add address outputs
+      const addresses = req.query.to.split(',')
+      const amounts = req.query.a.split(',')
+
+      // Validate address and amounts
+      if (!addresses.length) {
+        throw new Error('To address is required')
+      }
+
+      if (!amounts.length) {
+        throw new Error('Amount is required')
+      }
+
+      // Make sure that addresses and amounts are same length
+      if (addresses.length !== amounts.length) {
+        throw new Error(`You have ${addresses.length} addresses but ${amounts.length} amounts.`)
+      }
+
+      // Add them to invoice
+      addresses.forEach((address, i) => {
+        // Add 'bitcoincash:' prefix if not present
+        if (!address.startsWith('bitcoincash:')) {
+          address = `bitcoincash:${address}`
+        }
+
+        invoice.addAddress(address, amounts[i])
+      })
 
       // Memo is given, add it
       if (req.query.m) {
-        console.log(req.query.m)
         invoice.setMemo(req.query.m)
       }
 
